@@ -49,7 +49,7 @@ void setup() {
 
   Serial.begin(115200);
 
-
+  R = 0;
 
   rtc.begin();
   //rtc.setTime(hours, minutes, seconds);   // Set the time
@@ -101,7 +101,7 @@ void setup() {
   if (!SD.begin(cardSelect)) {
     display.println("Card init. failed!");
     display.display();
-    error(2);
+    R = 2;
   }
   
 
@@ -131,26 +131,30 @@ void loop() {
 
   buttons();
 
-  if (R > 0) sdwrite();
+  sdwrite();
+  
 
 
 }
 
 
 void altimeter() {
-  //Serial.println("altimeter");
+  // Get temp
   float tempc = (bmp.temperature);
+  //conver C to F
   tempf = (tempc * 1.8) + 32;
 
+  //get alt and convert to AGL
   float altagl = ((bmp.readAltitude(SEALEVELPRESSURE_HPA)) - altstart);
+  //convert M to Ft
   altft = (altagl * 3.281);
 }
 
 
 
 void writedisplay() {
-  //Serial.println("writedisplay");
-
+  Serial.println("writedisplay");
+  Serial.println(R);
 
   display.clearDisplay();
   display.setCursor(0, 0);
@@ -171,7 +175,10 @@ void writedisplay() {
   if (rtc.getSeconds() < 10)
     display.print("0");
   display.println(rtc.getSeconds());
-  if (R > 0) display.println ("Recording");  //record indication
+  if (R == 1) 
+    display.println ("Recording");  //record indication
+  if (R == 2) 
+    display.println (" No Card");
   display.display();
 }
 
@@ -180,64 +187,61 @@ void buttons() {
   //Serial.println("buttons");
   if (!digitalRead(BUTTON_B)) altstart = (bmp.readAltitude(SEALEVELPRESSURE_HPA));
   if (!digitalRead(BUTTON_A)) {
-    if (R < 1) {
-    R = 1;
-    String filename = ("/");
-    filename += rtc.getHours();
-    filename += rtc.getMinutes();
-    filename += rtc.getSeconds();
-    filename += ".txt";
+    if (R == 0) {
+      R = 1;
+      String filename = ("/");
+      filename += rtc.getHours();
+      filename += rtc.getMinutes();
+      filename += rtc.getSeconds();
+      filename += ".csv";
     
-    logfile = SD.open(filename, FILE_WRITE);
-    if ( ! logfile ) {
-      display.print("Couldnt create ");
-      display.println(filename);
-      display.display();
-      error(3);
-    }
-    Serial.print("Writing to ");
-    Serial.println(filename);
-    }
+      logfile = SD.open(filename, FILE_WRITE);
+      if ( ! logfile ) {
+        display.print("Couldnt create ");
+        display.println(filename);
+        display.display();
+        }
+      Serial.print("Writing to ");
+      Serial.println(filename);
+      }
 
   }
   if (!digitalRead(BUTTON_C)) {
     R = 0;
     logfile.close();
-  }
+    }
 }
 
-void error(uint8_t errno) {
-  while (1) {
-    uint8_t i;
-    for (i = 0; i < errno; i++) {
-      digitalWrite(13, HIGH);
-      delay(100);
-      digitalWrite(13, LOW);
-      delay(100);
-    }
-    for (i = errno; i < 10; i++) {
-      delay(500);
-    }
-  }
-}
+
 
 void sdwrite() {
+  if (R == 1){
+  Serial.println("writeSD");
   String RTCtime = ("");
+  Serial.println("1");
   if (rtc.getHours() < 10)
     RTCtime += "0";
   RTCtime += rtc.getHours();
+  Serial.println("2");
   RTCtime += ":";
   if (rtc.getMinutes() < 10)
     RTCtime += "0";
   RTCtime += rtc.getMinutes();
+  Serial.println("3");
   RTCtime += ":";
   if (rtc.getSeconds() < 10)
     RTCtime += "0";
   RTCtime += rtc.getSeconds();
+  Serial.println("4");
   digitalWrite(8, HIGH);
+  Serial.println("5");
   logfile.print(RTCtime); logfile.print(" , "); logfile.print(tempf, 1); logfile.print(" , "); logfile.println(altft, 0);
-  Serial.print(RTCtime); Serial.println(altft, 0);
+  Serial.print(RTCtime); Serial.print(" "); Serial.print(altft, 0); Serial.println("ft");
+  Serial.println("6");
   digitalWrite(8, LOW);
-
-  delay(100);
+  Serial.println("7");
+  logfile.flush();
+  Serial.println("8");
+  
+  }
 }
