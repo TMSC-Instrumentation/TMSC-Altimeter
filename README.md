@@ -1,4 +1,4 @@
-# TMSC-Altimeter
+# ZRAMS
 
 ## BOM:
 1. Adafruit Feather M0 Adalogger
